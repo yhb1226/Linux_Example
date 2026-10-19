@@ -1,5 +1,3 @@
-
-
 #include <sys/socket.h>
 #include <errno.h>
 #include <netinet/in.h>
@@ -99,9 +97,15 @@ int main()
 		pthread_create(&thid, NULL, client_thread, &clientfd);
 	}
 
+/*
+	select缺点：
+	1.参数多
+	2.每一次都需要把rset复制到内核，内核检测完再带出来
+	3.对IO的数量有限制
+*/
 #elif 0 // select 检测多少IO可读可写
 
-	// int nready = select(maxfd, rset, wset, eset, timeout);
+	// int nready = select(maxfd, rset, wset, eset, timeout);//maxfd用于判断内部循环的最大值，fd依次增加---0、1、2→stdin out error--3、4、5、6-→3是listen，4 5 6即为建立的三个连接，r和w是用来判断 fd 对应的 I/O 是否就绪，e表示需要特别处理的 I/O 事件（一般不使用），只要有事件select都会返回，没有事件也会在timeout也会返回
 
 	fd_set rfds, rset;
 	FD_ZERO(&rfds);
@@ -149,7 +153,7 @@ int main()
 					printf("disconnect\n");
 					// close(i);
 
-					FD_CLR(i, &rfds);
+					FD_CLR(i, &rfds); // 都关闭才可以
 					close(i);
 
 					break;
@@ -160,7 +164,7 @@ int main()
 			}
 		}
 	}
-#elif 0
+#elif 0 // poll,手动实现
 
 	struct pollfd fds[1024] = {0};
 
@@ -216,7 +220,7 @@ int main()
 		}
 	}
 
-#else
+#else // epoll⭐️⭐️⭐️⭐️⭐️⭐️⭐️
 
 	int epfd = epoll_create(1); // int size
 
