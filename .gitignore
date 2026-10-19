@@ -1,0 +1,13 @@
+# 构建目录和中间文件
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.out
+
+# 示例的编译产物
+/2.1.1-multi-io-main/multi-io
+/2.1.1-multi-io-main/reactor
+/2.1.1-multi-io-main/webserver
+/2.1.1-multi-io-main/mul_port_client_epoll
