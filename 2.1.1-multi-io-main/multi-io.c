@@ -155,8 +155,7 @@ int main()
 
 					FD_CLR(i, &rfds); // 都关闭才可以
 					close(i);
-
-					break;
+					continue;
 				}
 
 				send(i, buffer, count, 0);
@@ -168,6 +167,11 @@ int main()
 
 	struct pollfd fds[1024] = {0};
 
+	/*
+	fd      → 看谁
+	events  → 关注什么
+	revents → 实际发生了什么
+	*/
 	fds[sockfd].fd = sockfd;
 	fds[sockfd].events = POLLIN;
 
@@ -219,8 +223,30 @@ int main()
 			}
 		}
 	}
+/*
+question：
+	1.epoll有无mmap
+	2.epoll是否线程安全
 
-#else // epoll⭐️⭐️⭐️⭐️⭐️⭐️⭐️
+	fs/eventpoll.c
+
+	水平触发：LT
+	当设计的buffer无法一次性接收到全部数据时候，如果采用的是水平触发模式，那么就是一组一组发送，直到发完
+
+	边沿触发：ET
+	来一次则会触发一次，一次性发送数据不完整并且回显的是不完整的数据
+
+	用途：
+	tcp黏包->处理方法：
+	1.length (-)[----------]前面括号是length后面是content内容
+	short length = 0;
+	recv(fd, &length, 2, 0);
+	length = ntohs(length);
+	recv(fd, buffer, length, 0);
+
+	2.分隔符
+*/
+#else	// epoll⭐️⭐️⭐️⭐️⭐️⭐️⭐️
 
 	int epfd = epoll_create(1); // int size
 
@@ -243,7 +269,7 @@ int main()
 		{
 
 			int connfd = events[i].data.fd;
-			if (sockfd == connfd)
+			if (sockfd == connfd) // listen fd面向io实现
 			{
 
 				struct sockaddr_in clientaddr;
@@ -251,13 +277,13 @@ int main()
 
 				int clientfd = accept(sockfd, (struct sockaddr *)&clientaddr, &len);
 
-				ev.events = EPOLLIN | EPOLLET;
+				ev.events = EPOLLIN | EPOLLET; // 与上EPOLLET->边沿触发
 				ev.data.fd = clientfd;
 				epoll_ctl(epfd, EPOLL_CTL_ADD, clientfd, &ev);
 
 				printf("clientfd: %d\n", clientfd);
 			}
-			else if (events[i].events & EPOLLIN)
+			else if (events[i].events & EPOLLIN) // client fd
 			{
 
 				char buffer[10] = {0};
